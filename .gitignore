@@ -1,0 +1,19 @@
+# Python
+__pycache__
+
+# data
+data/*
+
+# logs
+logs/*
+*.log
+
+# Docker
+.dockerignore
+
+# Key files
+*.pem
+
+
+
+

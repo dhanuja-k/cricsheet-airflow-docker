@@ -1,0 +1,4 @@
+apache-airflow-client==2.10.0
+yoyo-migrations==9.0.0
+duckdb==1.1.1
+apache-airflow-providers-apache-spark==4.11.0
