@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta
 
 import pandas as pd
-import boto3
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
@@ -43,8 +43,10 @@ with DAG(
     )
 
     matches_url = 'https://cricsheet.org/downloads/t20s_csv2.zip'
-    matches_file_path = f'{os.getenv("AIRFLOW_HOME")}/data/matches.zip'
-    matches_folder_path = f'{os.getenv("AIRFLOW_HOME")}/data/matches'
+    data_folder_path = f'{os.getenv("AIRFLOW_HOME")}/data'
+    matches_file_path = f'{data_folder_path}/matches.zip'
+    matches_folder_path = f'{data_folder_path}/matches'
+    matches_info_path = f'{data_folder_path}/matches_info'
 
     download_matches_file = BashOperator(
         task_id='download_matches_file',
@@ -53,7 +55,9 @@ with DAG(
 
     unzip_matches_file = BashOperator(
         task_id='extract_matches_file',
-        bash_command=f'unzip -X {matches_file_path} -d {matches_folder_path}'
+        bash_command=f'unzip -oX {matches_file_path} -d {matches_folder_path} \
+        && mkdir -p {matches_info_path} \
+        && mv {matches_folder_path}/*_info.csv {matches_info_path}'
     )
 
     s3_bucket_name = "cricsheet-raw-data"
@@ -63,34 +67,39 @@ with DAG(
         bucket_name=s3_bucket_name
     )
 
-    def upload_files_to_s3(local_folder, s3_bucket):
-        aws_conn = BaseHook.get_connection('aws_default')
-        aws_access_key = aws_conn.login
-        aws_secret_key = aws_conn.password
+    def upload_files_to_s3(local_folder, s3_bucket, s3_folder):
 
-        s3 = boto3.client(
-            's3',
-            aws_access_key_id=aws_access_key,
-            aws_secret_access_key=aws_secret_key
-        )
+        s3_hook = S3Hook(aws_conn_id='aws_default')
 
         for root, dirs, files in os.walk(local_folder):
             for file_name in files:
                 if file_name.endswith(".csv"):
                     full_path = os.path.join(root, file_name)
-                    s3_key = f"matches/{file_name}"
+                    s3_key = f"{s3_folder}/{file_name}"
                     
-                    s3.upload_file(full_path, s3_bucket, s3_key)
+                    s3_hook.load_file(full_path, s3_key, bucket_name=s3_bucket, replace=True)
                     print(f"Uploaded {file_name} to s3://{s3_bucket}/{s3_key}")
 
-    upload_matches_to_s3 = PythonOperator(
-        task_id='upload_matches_to_s3',
+    upload_innings_to_s3 = PythonOperator(
+        task_id='upload_innings_to_s3',
         python_callable=upload_files_to_s3,
         op_kwargs={
             'local_folder': matches_folder_path,
-            's3_bucket': s3_bucket_name
+            's3_bucket': s3_bucket_name,
+            's3_folder' : 'innings'
         }
     )
+
+    upload_info_to_s3 = PythonOperator(
+        task_id='upload_info_to_s3',
+        python_callable=upload_files_to_s3,
+        op_kwargs={
+            'local_folder': matches_info_path,
+            's3_bucket': s3_bucket_name,
+            's3_folder' : 'info'
+        }
+    )
+
 
     upload_players_to_s3 = LocalFilesystemToS3Operator(
         task_id='upload_players_to_s3',
@@ -105,5 +114,5 @@ with DAG(
     (
         [download_players_file, unzip_matches_file] 
         >> create_s3_bucket 
-        >> [upload_matches_to_s3, upload_players_to_s3]
+        >> [upload_innings_to_s3, upload_players_to_s3, upload_info_to_s3]
     )
