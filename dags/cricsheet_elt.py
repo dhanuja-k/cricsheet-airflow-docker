@@ -109,10 +109,16 @@ with DAG(
         replace=True
     )
 
+    spark_staging = BashOperator(
+        task_id="spark_staging",
+        bash_command="python /opt/airflow/dags/scripts/pyspark_transforms.py",
+    )
+
     download_matches_file  >> unzip_matches_file
 
     (
         [download_players_file, unzip_matches_file] 
         >> create_s3_bucket 
         >> [upload_innings_to_s3, upload_players_to_s3, upload_info_to_s3]
+        >> spark_staging
     )
