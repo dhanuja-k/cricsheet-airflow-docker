@@ -26,6 +26,14 @@ if __name__ == "__main__":
         .getOrCreate()
     )
 
+    # PostgreSQL configuration
+    postgres_url = "jdbc:postgresql://postgres:5432/cricsheet"
+    postgres_properties = {
+        "user": "airflow",
+        "password": "airflow",
+        "driver": "org.postgresql.Driver",
+    }
+
     data_folder_path = f'{os.getenv("AIRFLOW_HOME")}/data'
 
     # Read Innings CSV Files with Ball-by-ball records
@@ -59,13 +67,17 @@ if __name__ == "__main__":
     # Pivot the DataFrame
     df_pivoted = df_info_only.groupBy("filename").pivot("c2").agg(F.first("c3"))
 
+    # Write results to PostgreSQL
+    df_pivoted.write.jdbc(
+        url=postgres_url,
+        table="dim_matches",
+        mode="overwrite",
+        properties=postgres_properties,
+    )
 
-    # Write Results to CSV
-    csv_path = f"{data_folder_path}/csv/"
-    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
-    csv_path_csvinfo= f"{csv_path}/csv_info"
-    csv_path_innings = f"{csv_path}/csv_innings"
-
-    df_pivoted.coalesce(1).write.mode("overwrite").option("header", "true").csv(csv_path_csvinfo)
-  
-    df_innings.coalesce(1).write.mode("overwrite").option("header", "true").csv(csv_path_innings)
+    df_innings.write.jdbc(
+        url=postgres_url,
+        table="fact_innings",
+        mode="overwrite",
+        properties=postgres_properties,
+    )
