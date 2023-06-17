@@ -12,6 +12,7 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
     AIRFLOW_CONN_POSTGRES_DEFAULT: postgres://airflow:airflow@postgres:5432/airflow
+    AIRFLOW_CONN_POSTGRES_DB: postgres://airflow:airflow@postgres:5432/cricsheet
   volumes:
     - ./dags:/opt/airflow/dags
     - ./data:/opt/airflow/data

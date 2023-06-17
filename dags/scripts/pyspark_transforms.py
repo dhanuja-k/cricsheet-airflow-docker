@@ -2,8 +2,8 @@ import os
 
 from pyspark.sql import SparkSession
 
-from pyspark.sql.types import StructType, StructField, StringType
-from pyspark.sql.functions import input_file_name, regexp_extract
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+from pyspark.sql.functions import input_file_name, regexp_extract, col
 
 
 if __name__ == "__main__":
@@ -56,6 +56,8 @@ if __name__ == "__main__":
 
     # Match_id is only found in the file name
     df_info = df_info.withColumn("filename", regexp_extract(input_file_name(), ".*/(.*)_.*", 1))
+
+    df_info = df_info.withColumn("filename", col("filename").cast(IntegerType()))
 
     df_info_only = df_info.filter((df_info.c1 == 'info') & \
                         ~(df_info.c2.isin('player','registry'))) \

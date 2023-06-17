@@ -1,24 +1,17 @@
 import subprocess
+import json
 
-# Define connection details
 conn_id = "aws_default"
 conn_type = "aws"
-access_key = "minio"
-secret_key = "minio123"
-region_name = "us-east-1"
-endpoint_url = "http://minio:9000"
-
-# Construct the extra JSON
 extra = {
-    "aws_access_key_id": access_key,
-    "aws_secret_access_key": secret_key,
-    "region_name": region_name,
-    "host": endpoint_url,
+            "aws_access_key_id": "minio",
+            "aws_secret_access_key": "minio123",
+            "region_name": "us-east-1",
+            "host": "http://minio:9000",
 }
-# Convert to JSON string
-extra_json = str(extra).replace("'", '"')
 
-# Define the CLI command
+extra_json = json.dumps(extra)
+
 command = [
     "airflow",
     "connections",

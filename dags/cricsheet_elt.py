@@ -12,6 +12,7 @@ from airflow.providers.amazon.aws.operators.s3 import S3CreateBucketOperator
 from airflow.providers.amazon.aws.transfers.local_to_s3 import (
     LocalFilesystemToS3Operator
 )
+from airflow.providers.postgres.operators.postgres import PostgresOperator
 
 
 default_args = {    
@@ -100,7 +101,6 @@ with DAG(
         }
     )
 
-
     upload_players_to_s3 = LocalFilesystemToS3Operator(
         task_id='upload_players_to_s3',
         filename=players_file_path,
@@ -114,11 +114,21 @@ with DAG(
         bash_command="python /opt/airflow/dags/scripts/pyspark_transforms.py",
     )
 
+    # Run SQL Scripts
+    
+
+    create_datamart = PostgresOperator(
+        task_id="create_datamart",
+        postgres_conn_id="postgres_db",
+        sql="sql/postgresql_datamart.sql",
+    )
+
+
     download_matches_file  >> unzip_matches_file
 
     (
         [download_players_file, unzip_matches_file] 
         >> create_s3_bucket 
         >> [upload_innings_to_s3, upload_players_to_s3, upload_info_to_s3]
-        >> spark_staging
+        >> spark_staging >> create_datamart
     )
