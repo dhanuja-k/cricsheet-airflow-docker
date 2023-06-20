@@ -18,10 +18,7 @@ if __name__ == "__main__":
         .config("spark.hadoop.fs.s3a.secret.key", "minio123")
         .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000")
         .config("spark.hadoop.fs.s3a.region", "us-east-1")
-        .config(
-            "spark.hadoop.fs.s3a.impl",
-            "org.apache.hadoop.fs.s3a.S3AFileSystem",
-        )
+        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
         .config("spark.hadoop.fs.s3a.path.style.access", "true")
         .getOrCreate()
     )
